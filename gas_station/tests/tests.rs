@@ -584,6 +584,7 @@ async fn test_workflow_happy_path() {
         .args_json(json!({
             "id": tx.id,
         }))
+        .deposit(NearToken::from_yoctonear(5))
         .gas(Gas::from_tgas(50))
         .transact()
         .await
@@ -600,6 +601,7 @@ async fn test_workflow_happy_path() {
         .args_json(json!({
             "id": tx.id,
         }))
+        .deposit(NearToken::from_yoctonear(5))
         .gas(Gas::from_tgas(50))
         .transact()
         .await

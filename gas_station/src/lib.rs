@@ -13,8 +13,8 @@ use near_sdk::{
     collections::{UnorderedMap, UnorderedSet, Vector},
     env,
     json_types::{U128, U64},
-    near, near_bindgen, require, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault,
-    Promise, PromiseError, PromiseOrValue,
+    near, near_bindgen, require, AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise,
+    PromiseError, PromiseOrValue,
 };
 #[allow(clippy::wildcard_imports)]
 use near_sdk_contract_tools::pause::*;
@@ -468,6 +468,7 @@ impl Contract {
         env::panic_str(&error_str);
     }
 
+    #[payable]
     pub fn sign_next(&mut self, id: U64) -> Promise {
         <Self as Pause>::require_unpaused();
 
@@ -504,7 +505,7 @@ impl Contract {
 
         #[allow(clippy::cast_possible_truncation)]
         let ret = ext_chain_key_token::ext(self.signer_contract_id.clone())
-            .with_attached_deposit(NearToken::from_yoctonear(1))
+            .with_attached_deposit(env::attached_deposit())
             .ckt_sign_hash(
                 next_signature_request.token_id.clone(),
                 None,
