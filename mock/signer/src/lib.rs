@@ -1,6 +1,6 @@
 use lib::{
     kdf::sha256,
-    signer::{SignRequest, SignResult, SignerInterface},
+    signer::{AffnPnt, Sclr, SignRequest, SignResult, SignatureResponse, SignerInterface},
     Rejectable,
 };
 use near_sdk::{env, near, require, AccountId, PromiseOrValue, PublicKey};
@@ -23,7 +23,7 @@ pub struct MockSignerContract {}
 #[near]
 impl SignerInterface for MockSignerContract {
     #[payable]
-    fn sign(&mut self, request: SignRequest) -> PromiseOrValue<SignResult> {
+    fn sign(&mut self, request: SignRequest) -> PromiseOrValue<SignatureResponse> {
         require!(
             request.key_version == KEY_VERSION,
             "Key version not supported",
@@ -35,7 +35,22 @@ impl SignerInterface for MockSignerContract {
         let (sig, recid) = signing_key
             .sign_prehash_recoverable(&request.payload)
             .unwrap();
-        PromiseOrValue::Value(SignResult::from_ecdsa_signature(sig, recid).unwrap())
+
+        // Create SignResult from the signature
+        let sign_result = SignResult::from_ecdsa_signature(sig, recid).unwrap();
+
+        // Convert SignResult to SignatureResponse
+        let signature_response = SignatureResponse {
+            big_r: AffnPnt {
+                affine_point: sign_result.big_r_hex,
+            },
+            s: Sclr {
+                scalar: sign_result.s_hex,
+            },
+            recovery_id: recid.to_byte(),
+        };
+
+        PromiseOrValue::Value(signature_response)
     }
 
     fn public_key(&self) -> PublicKey {
