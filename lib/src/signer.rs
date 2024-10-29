@@ -43,10 +43,27 @@ pub struct SignResult {
     pub s_hex: String,
 }
 
+#[near(serializers = [json])]
+pub struct AffnPnt {
+    pub affine_point: String,
+}
+
+#[near(serializers = [json])]
+pub struct Sclr {
+    pub scalar: String,
+}
+
+#[near(serializers = [json])]
+pub struct SignatureResponse {
+    pub big_r: AffnPnt,
+    pub s: Sclr,
+    pub recovery_id: u8,
+}
+
 #[allow(clippy::ptr_arg)]
 #[ext_contract(ext_signer)]
 pub trait SignerInterface {
-    fn sign(&mut self, request: SignRequest) -> PromiseOrValue<SignResult>;
+    fn sign(&mut self, request: SignRequest) -> PromiseOrValue<SignatureResponse>;
     fn public_key(&self) -> near_sdk::PublicKey;
     fn derived_public_key(
         &self,
@@ -112,6 +129,28 @@ impl TryFrom<SignResult> for ethers_core::types::Signature {
             r: r.to_bytes().as_slice().into(),
             s: s.as_slice().into(),
             v: v.to_byte().into(),
+        })
+    }
+}
+
+impl TryFrom<SignatureResponse> for ethers_core::types::Signature {
+    type Error = SignResultDecodeError;
+
+    fn try_from(signature_response: SignatureResponse) -> Result<Self, Self::Error> {
+        let big_r = Option::<AffinePoint>::from(AffinePoint::from_bytes(
+            hex::decode(signature_response.big_r.affine_point)?[..].into(),
+        ))
+        .ok_or(SignResultDecodeError::InvalidSignatureData)?;
+        let s = hex::decode(signature_response.s.scalar)?;
+
+        let r = <k256::Scalar as Reduce<<Secp256k1 as elliptic_curve::Curve>::Uint>>::reduce_bytes(
+            &big_r.x(),
+        );
+
+        Ok(ethers_core::types::Signature {
+            r: r.to_bytes().as_slice().into(),
+            s: s.as_slice().into(),
+            v: signature_response.recovery_id.into(),
         })
     }
 }
